@@ -1,0 +1,20 @@
+body {
+    background: #E6E3E4;
+}
+
+#title {
+    font-family: 'Combo', cursive, sans-serif;
+    text-align: center;
+}
+
+#boxbreaker {
+    margin: 20px auto;
+    width: 1000px;
+    height: 600px;
+    border: 1px solid #7A7778;
+    box-shadow: 1px 1px 3px 4px;
+}
+
+#click-to-play {
+    margin-left: 20px;
+}
