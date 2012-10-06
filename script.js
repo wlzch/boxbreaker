@@ -7,7 +7,7 @@ $(function(){
 
     var BRICK_COUNTS = 20, BRICK_WIDTH = 105, BRICK_HEIGHT = 35;
     var STAGE_WIDTH = 1000, STAGE_HEIGHT = 600;
-    var BAT_WIDTH = 200, BAT_HEIGHT = 20;
+    var PADDLE_WIDTH = 200, PADDLE_HEIGHT = 20;
     var BALL_RADIUS = 15;
     var columnPerRow = Math.floor(BRICK_COUNTS / 3), row, column;
 
@@ -38,28 +38,31 @@ $(function(){
                 height: BRICK_HEIGHT,
                 fill: randomColor(),
                 cornerRadius: 5,
-                strokeWidth: 4
+                strokeWidth: 4,
+                name: 'brick'
             }));
         }
     }
-    var bat = new Kinetic.Rect({
-        x: (STAGE_WIDTH / 2) - (BAT_WIDTH / 2),
-        y: (STAGE_HEIGHT - BAT_HEIGHT - 20),
-        width: BAT_WIDTH,
-        height: BAT_HEIGHT,
+    var paddle = new Kinetic.Rect({
+        x: (STAGE_WIDTH / 2) - (PADDLE_WIDTH / 2),
+        y: (STAGE_HEIGHT - PADDLE_HEIGHT - 20),
+        width: PADDLE_WIDTH,
+        height: PADDLE_HEIGHT,
         fill: '#C9E334',
         cornerRadius: 5,
         strokeWidth: 5
     });
     var ball = new Kinetic.Circle({
-        x: (STAGE_WIDTH / 2) - (BAT_WIDTH / 2) + (BAT_WIDTH / 2),
-        y: (STAGE_HEIGHT - BAT_HEIGHT - 20) - BAT_HEIGHT,
+        x: (STAGE_WIDTH / 2) - (PADDLE_WIDTH / 2) + (PADDLE_WIDTH / 2),
+        y: (STAGE_HEIGHT - PADDLE_HEIGHT - 20) - PADDLE_HEIGHT,
         radius: BALL_RADIUS,
         fill: '#FFF',
         strokeWidth: 4
     });
+    ball.vx = 6;
+    ball.vy = -6;
     layer.add(ball);
-    layer.add(bat);
+    layer.add(paddle);
     stage.add(layer);
 
     clickToPlay.click(function(){
@@ -72,47 +75,72 @@ $(function(){
     var startGame = function(){
         $(window).keydown(function(e) {
             if (e.which == 37) {
-                if (bat.getX() > 0) {
-                    bat.setX(bat.getX() - 10);
+                if (paddle.getX() > 0) {
+                    paddle.setX(paddle.getX() - 30);
                     layer.draw();
                 }
             } else if (e.which == 39) {
-                if (bat.getX() < (STAGE_WIDTH - BAT_WIDTH)) {
-                    bat.setX(bat.getX() + 10);
+                if (paddle.getX() < (STAGE_WIDTH - PADDLE_WIDTH)) {
+                    paddle.setX(paddle.getX() + 30);
                     layer.draw();
                 }
             }
         });
-        var bounce = function() {
-            var xEnd, yEnd;
-            if (orientation === RIGHT_UP_ORI) {
-                xEnd = STAGE_WIDTH - BALL_RADIUS;
-                yEnd = ball.getY() * Math.cos(degree);
-                orientation = LEFT_UP_ORI;
-            } else if (orientation === LEFT_UP_ORI) {
-                xEnd = ball.getX() * Math.cos(degree);
-                yEnd = 0;
-                orientation = LEFT_DOWN_ORI;
-            } else if (orientation === LEFT_DOWN_ORI) {
-                xEnd = 0;
-                yEnd = STAGE_HEIGHT * Math.cos(degree);
-                orientation = RIGHT_DOWN_ORI;
-            } else if (orientation === RIGHT_DOWN_ORI) {
-                xEnd = STAGE_WIDTH * Math.cos(degree);
-                yEnd = STAGE_HEIGHT - BALL_RADIUS;
-                orientation = RIGHT_UP_ORI;
-            }
-            console.log('called');
-            ball.transitionTo({
-                x: xEnd,
-                y: yEnd,
-                duration: 1,
-                callback: function(){
-                    bounce();
-                }
-            });
-        }
-        bounce();
-    }
+        bounce = function() {
+            ball.setX(ball.getX() + ball.vx);
+            ball.setY(ball.getY() + ball.vy);
+            //Check collision with wall
 
+            var changeX = function() {
+                ball.vx = -ball.vx;
+            }
+            var changeY = function() {
+                ball.vy = -ball.vy;
+            }
+            if (ball.getX() > STAGE_WIDTH || ball.getX() < 0) {
+                changeX();
+            }
+
+            if (ball.getY() > STAGE_HEIGHT || ball.getY() < 0) {
+                changeY();
+            }
+
+            // Check collision with brick
+            var stopIter = false;
+            for (var i = 0, bricks = stage.get('.brick'), len = bricks.length; i < len && !stopIter; i++) {
+                (function(){
+                    var brick = bricks[i];
+                    var radius = ball.getRadius();
+                    var ballX = ball.getX();
+                    var ballY = ball.getY();
+                    var brickWidth = brick.getWidth();
+                    var brickHeight = brick.getHeight();
+                    var brickX = brick.getX();
+                    var brickY = brick.getY();
+                    if ((ballX + radius >= brickX) && (ballX - radius <= brickX + brickWidth)) {
+                        if ((ballY + radius >= brickY) && (ballY - radius <= brickY + brickHeight)) {
+                            changeY();
+                            stopIter = true;
+                            brick.remove();
+                        }
+                    }
+                    // If ball is on the right side of left side of brick
+                    if ((ballX + radius == brickX && ((ballY + radius >= brickY) && (ballY - radius <= brickY + brickHeight))) ||
+                        ((ballX - radius == brickX + brickHeight) && ((ballY + radius >= brickY) && (ballY - radius <= brickY + brickHeight)))
+                       ) {
+                        changeX();
+                        changeY();
+                        brick.remove();
+                    }
+                })();
+            }
+            if ((ball.getX() + ball.getRadius() >= paddle.getX() && ball.getX() - ball.getRadius() <= paddle.getX() + paddle.getWidth()) &&
+                (ball.getY() + ball.getRadius() >= paddle.getY()) && (ball.getY() - ball.getRadius() <= paddle.getY() + paddle.getHeight())
+               ) {
+                changeY();
+               }
+            layer.draw();
+        }
+        setInterval(bounce, 1);
+    }
 });
